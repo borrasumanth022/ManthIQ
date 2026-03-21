@@ -26,7 +26,7 @@ Reads from the `aapl_ml` pipeline output:
 ../aapl_ml/data/processed/aapl_features.parquet
 ```
 
-Run the `aapl_ml` pipeline first if the file doesn't exist — see [`../aapl_ml/CLAUDE.md`](../aapl_ml/CLAUDE.md).
+Run the `aapl_ml` pipeline first if the file doesn't exist
 
 ## Running locally
 
