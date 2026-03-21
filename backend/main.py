@@ -22,7 +22,7 @@ PARQUET_PATH = Path(
     r"C:\Users\borra\OneDrive\Desktop\ML Projects\aapl_ml\data\processed\aapl_features.parquet"
 )
 PRED_PATH = Path(
-    r"C:\Users\borra\OneDrive\Desktop\ML Projects\aapl_ml\data\processed\aapl_predictions_best.parquet"
+    r"C:\Users\borra\OneDrive\Desktop\ML Projects\aapl_ml\data\processed\aapl_predictions_interactions.parquet"
 )
 
 app = FastAPI(title="ManthIQ API", version="1.0.0")
@@ -168,7 +168,7 @@ def get_model_stats():
         close_on_date = round(float(price.loc[latest_date, "close"]), 2)
 
     return {
-        "model":        "XGBoost dir_1w + class-balanced weights",
+        "model":        "XGBoost dir_1w + interaction features (57 feat, F1=0.375)",
         "oos_accuracy": round(oos_acc, 4),
         "n_samples":    n,
         "date_range":   {

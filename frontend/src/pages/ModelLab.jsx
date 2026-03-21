@@ -141,6 +141,7 @@ export default function ModelLab({ dark }) {
   const oosAccStr  = stats ? `${(stats.oos_accuracy * 100).toFixed(1)}%` : '—'
   const bullRecStr = stats ? `${(stats.per_class.bull.recall * 100).toFixed(1)}%` : '—'
   const bearRecStr = stats ? `${(stats.per_class.bear.recall * 100).toFixed(1)}%` : '—'
+  const sideRecStr = stats ? `${(stats.per_class.sideways.recall * 100).toFixed(1)}%` : '—'
 
   const latest = stats?.latest_prediction
 
@@ -155,14 +156,15 @@ export default function ModelLab({ dark }) {
         <div>
           <h1 className="text-2xl font-bold text-slate-50">Model Lab</h1>
           <p className={`text-sm mt-1 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
-            XGBoost dir_1w · AAPL · 5-fold walk-forward OOS · {stats ? `${stats.n_samples.toLocaleString()} samples` : '...'}
+            XGBoost dir_1w · 57 features · Macro F1=0.375 · 5-fold walk-forward OOS · {stats ? `${stats.n_samples.toLocaleString()} samples` : '...'}
           </p>
         </div>
 
         {/* Accuracy stats row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {loading ? (
             <>
+              <Skeleton className="h-28" />
               <Skeleton className="h-28" />
               <Skeleton className="h-28" />
               <Skeleton className="h-28" />
@@ -172,19 +174,25 @@ export default function ModelLab({ dark }) {
               <AccuracyCard
                 label="Overall OOS Accuracy"
                 value={oosAccStr}
-                sub={`vs ${(1/3*100).toFixed(1)}% random baseline`}
+                sub="vs 37.5% naive baseline (dir_1w)"
                 dark={dark}
               />
               <AccuracyCard
                 label="Bull Recall"
                 value={bullRecStr}
-                sub={`${stats.per_class.bull.n_actual.toLocaleString()} actual bull days`}
+                sub={`${stats.per_class.bull.n_actual.toLocaleString()} actual bull weeks`}
                 dark={dark}
               />
               <AccuracyCard
                 label="Bear Recall"
                 value={bearRecStr}
-                sub={`${stats.per_class.bear.n_actual.toLocaleString()} actual bear days`}
+                sub={`${stats.per_class.bear.n_actual.toLocaleString()} actual bear weeks`}
+                dark={dark}
+              />
+              <AccuracyCard
+                label="Sideways Recall"
+                value={sideRecStr}
+                sub={`${stats.per_class.sideways.n_actual.toLocaleString()} actual sideways weeks`}
                 dark={dark}
               />
             </>
