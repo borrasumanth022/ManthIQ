@@ -3,9 +3,11 @@ ManthIQ Backend — FastAPI
 Serves AAPL market data from the labeled parquet file.
 
 Endpoints:
-  GET /api/price       — OHLCV data (last N trading days)
-  GET /api/indicators  — Technical indicators (RSI, MACD, BBands, SMAs)
-  GET /api/overview    — Latest price, daily/monthly return, volatility
+  GET /api/price         — OHLCV data (last N trading days)
+  GET /api/indicators    — Technical indicators (RSI, MACD, BBands, SMAs)
+  GET /api/overview      — Latest price, daily/monthly return, volatility
+  GET /api/predictions   — OOS model predictions with confidence scores
+  GET /api/model-stats   — Aggregated accuracy metrics + latest prediction
 """
 
 from fastapi import FastAPI, Query
@@ -19,6 +21,9 @@ from functools import lru_cache
 PARQUET_PATH = Path(
     r"C:\Users\borra\OneDrive\Desktop\ML Projects\aapl_ml\data\processed\aapl_features.parquet"
 )
+PRED_PATH = Path(
+    r"C:\Users\borra\OneDrive\Desktop\ML Projects\aapl_ml\data\processed\aapl_predictions_best.parquet"
+)
 
 app = FastAPI(title="ManthIQ API", version="1.0.0")
 
@@ -31,10 +36,18 @@ app.add_middleware(
 )
 
 
-# ── Data loader (cached) ──────────────────────────────────────────────────────
+# ── Data loaders (cached) ─────────────────────────────────────────────────────
 @lru_cache(maxsize=1)
 def load_data() -> pd.DataFrame:
     df = pd.read_parquet(PARQUET_PATH)
+    df.index = pd.to_datetime(df.index)
+    df = df.sort_index()
+    return df
+
+
+@lru_cache(maxsize=1)
+def load_predictions() -> pd.DataFrame:
+    df = pd.read_parquet(PRED_PATH)
     df.index = pd.to_datetime(df.index)
     df = df.sort_index()
     return df
@@ -112,6 +125,92 @@ def get_overview():
         "rsi_14": round(float(latest.get("rsi_14", 0)), 1) if "rsi_14" in df.columns else None,
         "volume": int(latest.get("volume", 0)) if "volume" in df.columns else None,
     }
+
+
+@app.get("/api/model-stats")
+def get_model_stats():
+    """Aggregated OOS accuracy metrics and the latest prediction row."""
+    pred = load_predictions()
+    price = load_data()
+
+    n = len(pred)
+    correct = pred["correct"]
+    oos_acc = float(correct.mean())
+
+    # Per-class recall and precision
+    per_class = {}
+    for label, name in [(-1, "bear"), (0, "sideways"), (1, "bull")]:
+        actual_mask    = pred["actual"]    == label
+        predicted_mask = pred["predicted"] == label
+        recall    = float(correct[actual_mask].mean())    if actual_mask.sum()    > 0 else 0.0
+        precision = float(correct[predicted_mask].mean()) if predicted_mask.sum() > 0 else 0.0
+        per_class[name] = {
+            "n_actual":    int(actual_mask.sum()),
+            "n_predicted": int(predicted_mask.sum()),
+            "recall":      round(recall, 4),
+            "precision":   round(precision, 4),
+        }
+
+    # Latest row
+    latest = pred.iloc[-1]
+    prob_bull     = round(float(latest["prob_bull"]),     4)
+    prob_bear     = round(float(latest["prob_bear"]),     4)
+    prob_sideways = round(float(latest["prob_sideways"]), 4)
+
+    # Dominant signal from latest prediction
+    signal_map = {1: "Bull", 0: "Sideways", -1: "Bear"}
+    signal     = signal_map.get(int(latest["predicted"]), "Unknown")
+
+    # Merge latest prediction date with closest price close
+    latest_date = pred.index[-1]
+    close_on_date = None
+    if latest_date in price.index:
+        close_on_date = round(float(price.loc[latest_date, "close"]), 2)
+
+    return {
+        "model":        "XGBoost dir_1w + class-balanced weights",
+        "oos_accuracy": round(oos_acc, 4),
+        "n_samples":    n,
+        "date_range":   {
+            "from": pred.index[0].strftime("%Y-%m-%d"),
+            "to":   pred.index[-1].strftime("%Y-%m-%d"),
+        },
+        "per_class":    per_class,
+        "latest_prediction": {
+            "date":          latest_date.strftime("%Y-%m-%d"),
+            "actual":        int(latest["actual"]),
+            "predicted":     int(latest["predicted"]),
+            "signal":        signal,
+            "prob_bear":     prob_bear,
+            "prob_sideways": prob_sideways,
+            "prob_bull":     prob_bull,
+            "confidence":    round(float(latest["confidence"]), 4),
+            "close":         close_on_date,
+        },
+    }
+
+
+@app.get("/api/predictions")
+def get_predictions(limit: int = Query(default=None, ge=5, le=10000)):
+    """
+    OOS model predictions merged with close price.
+    Each record: date, close, actual, predicted, correct,
+                 prob_bear, prob_sideways, prob_bull, confidence.
+    `actual` / `predicted` values: -1=Bear, 0=Sideways, 1=Bull.
+    """
+    pred  = load_predictions()
+    price = load_data()[["close"]]
+
+    # Left-join predictions onto price so every prediction day gets a close
+    merged = pred.join(price, how="left")
+
+    if limit is not None:
+        merged = merged.tail(limit)
+
+    return df_to_records(merged[[
+        "close", "actual", "predicted", "correct",
+        "prob_bear", "prob_sideways", "prob_bull", "confidence",
+    ]])
 
 
 @app.get("/api/debug")
