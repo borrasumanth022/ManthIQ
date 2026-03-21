@@ -2,8 +2,9 @@
 
 **Market intelligence dashboard for equities** — interactive price history, technical indicators, and an ML prediction lab in a single dark-mode web app.
 
-![ManthIQ Dashboard](docs/screenshot.png)
-> _Screenshot placeholder — replace with a real capture before publishing._
+![ManthIQ Dashboard]
+<img width="1559" height="978" alt="image" src="https://github.com/user-attachments/assets/ed7eec11-2b14-4b63-857b-20dd5590aa5a" />
+
 
 ---
 
