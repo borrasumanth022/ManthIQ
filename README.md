@@ -1,74 +1,149 @@
 # ManthIQ
 
-Market intelligence dashboard for AAPL — built on top of the [aapl_ml](../aapl_ml) data pipeline.
+**Market intelligence dashboard for equities** — interactive price history, technical indicators, and an ML prediction lab in a single dark-mode web app.
 
-## What it is
+![ManthIQ Dashboard](docs/screenshot.png)
+> _Screenshot placeholder — replace with a real capture before publishing._
 
-ManthIQ is a two-tab fintech web dashboard:
+---
 
-- **Live** — price and volume chart (1995–present), key metric cards (latest price, daily return, 21-day volatility), and full time-range filters from 1M to All.
-- **Model Lab** — actual vs. predicted price overlay, direction confidence bar, and model accuracy cards. Currently shows simulated predictions; a trained model will be wired in during Phase 2.
+## Features
+
+### Live Tab
+- 30-year OHLCV price and volume chart with gradient area rendering
+- Time-range filters: 1M · 3M · 6M · 1Y · 5Y · 10Y · 15Y · 20Y · 25Y · All
+- Metric cards: latest price, daily return, 21-day annualised volatility
+- Dark / light mode toggle, persisted across sessions
+
+### Model Lab Tab
+- Actual vs. predicted price overlay (dashed line) on the same chart
+- Direction confidence bar showing bullish / bearish signal probability
+- Model accuracy cards: overall, bull, and bear accuracy
+- ⚠️ Currently shows simulated predictions — live model output coming in Phase 2
+
+---
 
 ## Tech stack
 
-| Layer | Tech |
+| Layer | Technology |
 |---|---|
 | Frontend | React 18, Vite, Tailwind CSS, Recharts |
 | Backend | FastAPI, Uvicorn |
-| Data | Pandas, PyArrow (reads `.parquet`) |
-| Runtime | Python 3.13 (Anaconda), Node 24 |
+| Data processing | Python, Pandas, NumPy, PyArrow |
+| Data format | Parquet |
 
-## Data source
+---
 
-Reads from the `aapl_ml` pipeline output:
+## Prerequisites
+
+- **Python** 3.10+ with `pip`
+- **Node.js** 18+
+
+---
+
+## Setup
+
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/your-username/ManthIQ.git
+cd ManthIQ
+```
+
+### 2. Backend
+
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+The backend reads a Parquet file of OHLCV data and technical features. By default it expects the file at:
 
 ```
 ../aapl_ml/data/processed/aapl_features.parquet
 ```
 
-Run the `aapl_ml` pipeline first if the file doesn't exist — see [`../aapl_ml/CLAUDE.md`](../aapl_ml/CLAUDE.md).
+Update the `PARQUET_PATH` variable in `backend/main.py` to point to your own data file if needed. The file must contain at minimum: `open`, `high`, `low`, `close`, `volume`, and a `DatetimeIndex`.
 
-## Running locally
-
-**Terminal 1 — Backend** (port 8000):
-
-```bash
-cd backend
-python -m uvicorn main:app --reload --port 8000
-```
-
-**Terminal 2 — Frontend** (port 5173):
+### 3. Frontend
 
 ```bash
 cd frontend
-npm install   # first time only
+npm install
+```
+
+---
+
+## Running
+
+Open two terminals from the project root.
+
+**Terminal 1 — API server:**
+
+```bash
+cd backend
+uvicorn main:app --reload --port 8000
+```
+
+**Terminal 2 — Dev server:**
+
+```bash
+cd frontend
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173).
-API docs at [http://localhost:8000/docs](http://localhost:8000/docs).
+Then open **http://localhost:5173** in your browser.
 
-## API endpoints
+Interactive API docs are available at **http://localhost:8000/docs**.
 
-| Endpoint | Description |
-|---|---|
-| `GET /api/price` | Full OHLCV history (pass `?limit=N` to cap rows) |
-| `GET /api/indicators` | RSI, MACD, Bollinger Bands, SMA 50/200 |
-| `GET /api/overview` | Latest price, daily/monthly return, volatility |
-| `GET /api/debug` | Parquet path, row count, date range |
+---
+
+## API reference
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/price` | OHLCV records. Pass `?limit=N` to cap the number of rows returned. |
+| `GET` | `/api/indicators` | RSI, MACD, Bollinger Bands, SMA 50/200 |
+| `GET` | `/api/overview` | Latest price, daily return, 1-month return, volatility, RSI |
+| `GET` | `/api/debug` | Data file path, row count, and date range |
+
+---
 
 ## Project structure
 
 ```
 ManthIQ/
 ├── backend/
-│   ├── main.py          # FastAPI app
+│   ├── main.py              # FastAPI app — data loading and API endpoints
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
-│   │   ├── components/  # Navbar, MetricCard, PriceChart
-│   │   ├── pages/       # Dashboard (Live), ModelLab
-│   │   └── hooks/       # useTheme
+│   │   ├── components/
+│   │   │   ├── Navbar.jsx   # Tab navigation and theme toggle
+│   │   │   ├── MetricCard.jsx
+│   │   │   └── PriceChart.jsx  # Recharts price + volume + predicted line
+│   │   ├── pages/
+│   │   │   ├── Dashboard.jsx   # Live tab
+│   │   │   └── ModelLab.jsx    # Model Lab tab
+│   │   └── hooks/
+│   │       └── useTheme.js     # Dark/light mode with localStorage
+│   ├── index.html
+│   ├── vite.config.js       # Proxies /api → :8000
 │   └── package.json
-└── start.bat            # Windows: launches both servers
+└── LICENSE
 ```
+
+---
+
+## Roadmap
+
+- [ ] Wire trained XGBoost / LSTM model into Model Lab
+- [ ] Candlestick chart mode
+- [ ] Multi-ticker support
+- [ ] Deployable Docker setup
+
+---
+
+## License
+
+[MIT](LICENSE) © 2026 Sumanth Borra
