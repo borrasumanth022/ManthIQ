@@ -14,6 +14,10 @@ frontend/dist/
 .env.local
 .env.*.local
 
+# Claude Code internal files
+CLAUDE.md
+CLAUDE_ManthIQ.md
+
 # OS
 .DS_Store
 Thumbs.db
