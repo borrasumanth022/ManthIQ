@@ -1,0 +1,34 @@
+{
+  "app": {
+    "name": "ManthIQ",
+    "version": "0.1.0",
+    "description": "AAPL market intelligence fintech dashboard"
+  },
+  "backend": {
+    "port": 8000,
+    "host": "0.0.0.0",
+    "reload": true,
+    "dir": "src/backend",
+    "module": "main:app"
+  },
+  "frontend": {
+    "port": 5173,
+    "dir": "src/frontend"
+  },
+  "data": {
+    "features_parquet": "C:\\Users\\borra\\OneDrive\\Desktop\\ML Projects\\aapl_ml\\data\\processed\\aapl_features.parquet",
+    "predictions_parquet": "C:\\Users\\borra\\OneDrive\\Desktop\\ML Projects\\aapl_ml\\data\\processed\\aapl_predictions_interactions.parquet",
+    "ticker": "AAPL",
+    "date_range": {
+      "features": {"from": "1995-10-16", "to": "2026-03-20"},
+      "predictions": {"from": "2022-01-01", "to": "2025-03-19"}
+    }
+  },
+  "model": {
+    "type": "XGBoost",
+    "target": "dir_1w",
+    "n_features": 57,
+    "f1_score": 0.375,
+    "classes": {"bear": -1, "sideways": 0, "bull": 1}
+  }
+}

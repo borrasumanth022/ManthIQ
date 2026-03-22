@@ -4,15 +4,14 @@ echo.
 
 :: Start backend
 echo [1/2] Starting FastAPI backend on http://localhost:8000
-start "ManthIQ Backend" cmd /k "C:\Users\borra\anaconda3\python.exe -m uvicorn main:app --reload --port 8000"
+start "ManthIQ Backend" cmd /k "cd /d src\backend && C:\Users\borra\anaconda3\python.exe -m uvicorn main:app --reload --port 8000"
 
 :: Give the backend a second to bind
 timeout /t 2 /nobreak >nul
 
 :: Start frontend
 echo [2/2] Starting Vite dev server on http://localhost:5173
-cd frontend
-start "ManthIQ Frontend" cmd /k "npm run dev"
+start "ManthIQ Frontend" cmd /k "cd /d src\frontend && npm run dev"
 
 echo.
 echo ManthIQ is starting:

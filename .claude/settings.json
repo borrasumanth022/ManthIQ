@@ -1,0 +1,62 @@
+{
+  "projectName": "ManthIQ",
+  "version": "1.0.0",
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npm install*)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git mv*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(curl http://localhost:*)",
+      "Bash(C:\\Users\\borra\\anaconda3\\python.exe*)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)"
+    ]
+  },
+  "env": {
+    "BACKEND_PORT": "8000",
+    "FRONTEND_PORT": "5173",
+    "PYTHON_EXE": "C:\\Users\\borra\\anaconda3\\python.exe",
+    "BACKEND_DIR": "src/backend",
+    "FRONTEND_DIR": "src/frontend"
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write(src/backend/**)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/api-testing.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write(src/frontend/src/**)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/build-check.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/data-validation.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
