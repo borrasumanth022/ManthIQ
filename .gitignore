@@ -17,6 +17,7 @@ src/frontend/dist/
 # Claude Code internal files
 CLAUDE.md
 CLAUDE_ManthIQ.md
+.claude/
 
 # OS
 .DS_Store
