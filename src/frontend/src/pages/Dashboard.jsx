@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import MetricCard from '../components/MetricCard.jsx'
 import PriceChart from '../components/PriceChart.jsx'
+import { COMPANY_NAMES, getSector } from '../config/tickers.js'
 
 const MONTHS = [
   'January','February','March','April','May','June',
@@ -14,7 +15,6 @@ function ordinal(n) {
 }
 
 function formatDate(iso) {
-  // Parse "YYYY-MM-DD" as plain string parts — no Date() to avoid timezone shifts
   const [year, month, day] = iso.split('-').map(Number)
   return `${MONTHS[month - 1]} ${ordinal(day)}, ${year}`
 }
@@ -26,6 +26,8 @@ function useApi(url) {
 
   useEffect(() => {
     setLoading(true)
+    setData(null)
+    setError(null)
     fetch(url)
       .then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
@@ -56,12 +58,18 @@ function StatusBadge({ label, ok }) {
   )
 }
 
-export default function Dashboard({ dark }) {
-  const overview = useApi('/api/overview')
-  const price    = useApi('/api/price')
+const SECTOR_BADGE = {
+  Tech:    'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
+  Biotech: 'bg-teal-500/10   text-teal-400   border border-teal-500/20',
+}
 
-  const ov = overview.data
+export default function Dashboard({ dark, ticker }) {
+  const overview = useApi(`/api/overview?ticker=${ticker}`)
+  const price    = useApi(`/api/price?ticker=${ticker}`)
+
+  const ov        = overview.data
   const backendOk = !overview.error && !overview.loading
+  const sector    = getSector(ticker)
 
   const fmtPrice = v => v != null ? `$${Number(v).toFixed(2)}` : '—'
   const fmtPct   = v => v != null
@@ -78,14 +86,19 @@ export default function Dashboard({ dark }) {
           <div>
             <div className="flex items-center gap-3 mb-1">
               <h1 className="text-2xl font-bold text-slate-50">
-                Apple Inc.
+                {COMPANY_NAMES[ticker] ?? ticker}
               </h1>
               <span className={`
                 px-2 py-0.5 rounded text-xs font-bold tracking-wider num
                 ${dark ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-500'}
               `}>
-                AAPL
+                {ticker}
               </span>
+              {sector && (
+                <span className={`px-2 py-0.5 rounded text-xs font-medium ${SECTOR_BADGE[sector] ?? ''}`}>
+                  {sector}
+                </span>
+              )}
               <StatusBadge label="Live" ok={backendOk} />
             </div>
             <p className={`text-sm ${dark ? 'text-slate-500' : 'text-slate-400'}`}>

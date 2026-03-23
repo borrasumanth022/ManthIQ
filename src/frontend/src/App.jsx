@@ -38,7 +38,8 @@ class ErrorBoundary extends Component {
 
 export default function App() {
   const [dark, toggleTheme] = useTheme()
-  const [tab, setTab] = useState('live')
+  const [tab, setTab]       = useState('live')
+  const [ticker, setTicker] = useState('AAPL')
 
   return (
     <div className={dark ? 'dark' : ''}>
@@ -47,11 +48,13 @@ export default function App() {
         onToggleTheme={toggleTheme}
         activeTab={tab}
         onTabChange={setTab}
+        ticker={ticker}
+        onTickerChange={setTicker}
       />
-      <ErrorBoundary key={tab}>
+      <ErrorBoundary key={`${tab}-${ticker}`}>
         {tab === 'live'
-          ? <Dashboard dark={dark} />
-          : <ModelLab dark={dark} />
+          ? <Dashboard dark={dark} ticker={ticker} />
+          : <ModelLab  dark={dark} ticker={ticker} />
         }
       </ErrorBoundary>
     </div>

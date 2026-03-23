@@ -1,12 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
 import PriceChart from '../components/PriceChart.jsx'
+import { COMPANY_NAMES, getSector } from '../config/tickers.js'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 /**
- * Merge predictions with price records.
- * Adds `signal_offset`: close ± 2% based on predicted direction so the
- * direction signal is visible on the same price scale as the actual line.
+ * Encode direction signal as ±2% price offset so it's visible on the price scale.
  *   Bull  (+1)  → predicted = close * 1.02
  *   Sideways (0) → predicted = close
  *   Bear  (-1)  → predicted = close * 0.98
@@ -38,6 +37,11 @@ function NoticeBanner({ dateRange }) {
       </span>
     </div>
   )
+}
+
+const SECTOR_BADGE = {
+  Tech:    'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
+  Biotech: 'bg-teal-500/10   text-teal-400   border border-teal-500/20',
 }
 
 function ConfidenceBar({ probBull = 0, probBear = 0, probSideways = 0, date, dark }) {
@@ -74,18 +78,9 @@ function ConfidenceBar({ probBull = 0, probBear = 0, probSideways = 0, date, dar
 
       {/* Three-segment bar: Bear | Sideways | Bull */}
       <div className="relative h-3 rounded-full overflow-hidden bg-slate-800 flex">
-        <div
-          className="h-full bg-red-500 transition-all duration-700"
-          style={{ width: `${bearPct}%` }}
-        />
-        <div
-          className="h-full bg-amber-500 transition-all duration-700"
-          style={{ width: `${sidePct}%` }}
-        />
-        <div
-          className="h-full bg-emerald-500 transition-all duration-700"
-          style={{ width: `${bullPct}%` }}
-        />
+        <div className="h-full bg-red-500 transition-all duration-700"     style={{ width: `${bearPct}%` }} />
+        <div className="h-full bg-amber-500 transition-all duration-700"   style={{ width: `${sidePct}%` }} />
+        <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${bullPct}%` }} />
       </div>
 
       <div className="flex justify-between mt-2">
@@ -117,22 +112,28 @@ function Skeleton({ className = '' }) {
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 
-export default function ModelLab({ dark }) {
+export default function ModelLab({ dark, ticker }) {
   const [stats,    setStats]    = useState(null)
   const [predData, setPredData] = useState(null)
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState(null)
 
+  const sector = getSector(ticker)
+
   useEffect(() => {
+    setLoading(true)
+    setError(null)
+    setStats(null)
+    setPredData(null)
+
     Promise.all([
-      fetch('/api/model-stats').then(r => { if (!r.ok) throw new Error(`stats HTTP ${r.status}`); return r.json() }),
-      fetch('/api/predictions').then(r => { if (!r.ok) throw new Error(`preds HTTP ${r.status}`); return r.json() }),
+      fetch(`/api/model-stats?ticker=${ticker}`).then(r => { if (!r.ok) throw new Error(`stats HTTP ${r.status}`); return r.json() }),
+      fetch(`/api/predictions?ticker=${ticker}`).then(r => { if (!r.ok) throw new Error(`preds HTTP ${r.status}`); return r.json() }),
     ])
       .then(([s, p]) => { setStats(s); setPredData(p); setLoading(false) })
       .catch(e => { setError(e.message); setLoading(false) })
-  }, [])
+  }, [ticker])
 
-  // Encode direction signal as ±2% price offset for the chart predicted line
   const chartData = useMemo(
     () => (predData ? mergeSignal(predData) : null),
     [predData]
@@ -154,9 +155,23 @@ export default function ModelLab({ dark }) {
 
         {/* Page header */}
         <div>
-          <h1 className="text-2xl font-bold text-slate-50">Model Lab</h1>
-          <p className={`text-sm mt-1 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
-            XGBoost dir_1w · 57 features · Macro F1=0.375 · 5-fold walk-forward OOS · {stats ? `${stats.n_samples.toLocaleString()} samples` : '...'}
+          <div className="flex items-center gap-3 mb-1">
+            <h1 className="text-2xl font-bold text-slate-50">Model Lab</h1>
+            <span className={`
+              px-2 py-0.5 rounded text-xs font-bold tracking-wider num
+              bg-slate-800 text-slate-400
+            `}>
+              {ticker}
+            </span>
+            {sector && (
+              <span className={`px-2 py-0.5 rounded text-xs font-medium ${SECTOR_BADGE[sector] ?? ''}`}>
+                {sector}
+              </span>
+            )}
+          </div>
+          <p className={`text-sm mt-0.5 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+            XGBoost dir_1w · {sector} sector model ·{' '}
+            {stats ? `${stats.n_samples.toLocaleString()} OOS samples` : '...'}
           </p>
         </div>
 
@@ -169,6 +184,10 @@ export default function ModelLab({ dark }) {
               <Skeleton className="h-28" />
               <Skeleton className="h-28" />
             </>
+          ) : error ? (
+            <div className="col-span-4 rounded-xl p-6 bg-red-950/40 border border-red-900/50 text-red-400 text-sm">
+              Could not load model data: {error}
+            </div>
           ) : (
             <>
               <AccuracyCard
@@ -220,7 +239,7 @@ export default function ModelLab({ dark }) {
           <div className="flex items-center justify-between mb-2">
             <div>
               <h2 className="text-base font-semibold text-slate-200">
-                Price vs Direction Signal
+                Price vs Direction Signal · {COMPANY_NAMES[ticker] ?? ticker}
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Purple line = close ±2% per predicted direction (Bull +2%, Sideways 0%, Bear −2%)
