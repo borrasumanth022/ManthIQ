@@ -102,9 +102,29 @@ def load_ticker_predictions(ticker: str) -> pd.DataFrame:
             f"Predictions parquet not found for {ticker}.\n"
             f"Expected: {MARKET_ML_BASE / f'{ticker}_predictions.parquet'}"
         )
+    print(f"[load_ticker_predictions] loading {path}", flush=True)
     df = pd.read_parquet(path)
     df.index = pd.to_datetime(df.index)
-    return df.sort_index()
+    df = df.sort_index()
+
+    # Normalise column names from the new market_ml pipeline schema:
+    #   proba_bear  → prob_bear
+    #   proba_side  → prob_sideways
+    #   proba_bull  → prob_bull
+    df = df.rename(columns={
+        "proba_bear": "prob_bear",
+        "proba_side": "prob_sideways",
+        "proba_bull": "prob_bull",
+    })
+
+    # Compute derived columns the old pipeline pre-baked but the new one omits
+    if "correct" not in df.columns:
+        df["correct"] = (df["actual"] == df["predicted"]).astype(float)
+    if "confidence" not in df.columns:
+        df["confidence"] = df[["prob_bear", "prob_sideways", "prob_bull"]].max(axis=1)
+
+    print(f"[load_ticker_predictions] {ticker}: {len(df)} rows, cols={df.columns.tolist()}", flush=True)
+    return df
 
 
 def df_to_records(df: pd.DataFrame) -> list[dict]:
