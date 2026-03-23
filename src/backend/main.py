@@ -76,13 +76,13 @@ def _features_path(ticker: str) -> Path:
 
 
 def _predictions_path(ticker: str) -> Path:
-    """Resolve predictions parquet for ticker. Falls back to legacy AAPL path."""
+    """Return the predictions parquet path for a ticker.
+    Always prefers the market_ml path; AAPL falls back to the legacy aapl_ml
+    path only when the market_ml file is absent."""
     p = MARKET_ML_BASE / f"{ticker}_predictions.parquet"
-    if p.exists():
-        return p
-    if ticker == "AAPL" and _AAPL_PREDICTIONS.exists():
+    if ticker == "AAPL" and not p.exists() and _AAPL_PREDICTIONS.exists():
         return _AAPL_PREDICTIONS
-    raise FileNotFoundError(f"No predictions parquet for {ticker}. Expected: {p}")
+    return p  # existence validated in load_ticker_predictions
 
 
 # ── Data loaders (cached per ticker) ─────────────────────────────────────────
@@ -96,7 +96,13 @@ def load_ticker_data(ticker: str) -> pd.DataFrame:
 
 @lru_cache(maxsize=20)
 def load_ticker_predictions(ticker: str) -> pd.DataFrame:
-    df = pd.read_parquet(_predictions_path(ticker))
+    path = _predictions_path(ticker)
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Predictions parquet not found for {ticker}.\n"
+            f"Expected: {MARKET_ML_BASE / f'{ticker}_predictions.parquet'}"
+        )
+    df = pd.read_parquet(path)
     df.index = pd.to_datetime(df.index)
     return df.sort_index()
 
@@ -197,13 +203,13 @@ def get_model_stats(ticker: str = Query(default="AAPL")):
     ticker = _validate_ticker(ticker)
     try:
         pred = load_ticker_predictions(ticker)
-    except FileNotFoundError as e:
+    except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
     # Price is optional — used only to attach close price to latest prediction
     try:
         price = load_ticker_data(ticker)
-    except FileNotFoundError:
+    except Exception:
         price = None
 
     correct = pred["correct"]
@@ -265,7 +271,7 @@ def get_predictions(
     ticker = _validate_ticker(ticker)
     try:
         pred = load_ticker_predictions(ticker)
-    except FileNotFoundError as e:
+    except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
     try:
