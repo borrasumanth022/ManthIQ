@@ -1,29 +1,32 @@
-Review $ARGUMENTS (default: all recently modified files in src/) for bugs, broken assumptions, and code quality.
+# /project:review -- Code review for API and frontend correctness
 
-## Backend (src/backend/main.py)
+**Usage:**
+- /project:review -- review files changed in last commit
+- /project:review src/backend/main.py -- specific file
+- /project:review src/frontend/src/ -- all React files
 
-1. **Ticker validation**: every endpoint must call `_validate_ticker()` before accessing data.
-2. **Exception handling**: loading failures must raise `HTTPException` (not propagate as 500).
-   - `load_ticker_data()` and `load_ticker_predictions()` failures must be caught with `except Exception`.
-3. **Label encoding**: predictions use `0=Bear, 1=Sideways, 2=Bull`. Check `signal_map` and `per_class` loop both use this encoding.
-4. **Path resolution**: `_features_path()` and `_predictions_path()` must use `MARKET_ML_BASE / f"{ticker}_{type}.parquet"`. No hardcoded Windows paths.
-5. **Cache safety**: `@lru_cache` functions take only hashable args (strings/ints). Verify no mutable args.
-6. **Debug code**: no `print()` statements left in loaders or endpoint handlers.
-7. **CORS**: must allow all origins for local development.
+## Instructions
 
-## Frontend (src/frontend/src/)
+Adopt the persona from .claude/agents/code-reviewer.md.
 
-1. **Ticker propagation**: `ticker` prop passed from `App.jsx` → `Navbar` → `Dashboard`/`ModelLab`. Changing it must trigger re-fetch (check `useEffect` deps include `ticker`).
-2. **Sector config**: `SECTORS` and `COMPANY_NAMES` must only be imported from `config/tickers.js` — never duplicated inline.
-3. **Dark mode**: every new className must have a paired dark: variant or use slate palette.
-4. **Error states**: all fetch calls must handle errors visibly (never silently fail to empty state).
-5. **Signal display**: `latest_prediction.signal` must render as `Bull`/`Sideways`/`Bear` with appropriate color (emerald/amber/red). If `Unknown` appears, flag as bug.
-6. **Chart data**: `mergeSignal()` in ModelLab must use `DIR_OFFSET = { 0: -0.02, 1: 0, 2: 0.02 }` (not the old `-1/0/1` arithmetic).
+1. Determine files to review:
+   - If path given, read that file/directory
+   - If no path, run: git diff HEAD~1 --name-only
 
-## Common checks
+2. For Python (FastAPI) files:
+   - [ ] All 11 tickers handled (AAPL, MSFT, NVDA, GOOGL, AMZN, META, LLY, MRNA, BIIB, REGN, VRTX)
+   - [ ] Parquet schema validated on load (check for expected columns)
+   - [ ] Error responses return proper HTTP status codes (404 for missing ticker)
+   - [ ] No hardcoded file paths -- use MARKET_ML_BASE from config
+   - [ ] CORS configured for localhost:5173
 
-- No `console.log()` left in production JSX
-- No hardcoded ticker names (use `COMPANY_NAMES[ticker]`)
-- `CLAUDE.local.md` never imported or referenced from source code
+3. For JavaScript/React files:
+   - [ ] Ticker config in src/config/tickers.js, not hardcoded in components
+   - [ ] API calls go through /api proxy (not direct localhost:8000)
+   - [ ] Loading and error states handled in all data-fetching components
+   - [ ] Dark/light mode via useTheme hook, not inline styles
 
-Format findings as: `[SEVERITY] file:line — issue — fix`
+4. For each FAIL: show file, line number, issue, and correct fix.
+
+5. Final verdict: CLEAN or ISSUES FOUND (N issues).
+

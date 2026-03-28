@@ -1,85 +1,28 @@
-# Code Style — ManthIQ
+# Coding Standards -- ManthIQ
 
-## Backend (Python / FastAPI)
+## Python (FastAPI backend)
+- Endpoints in src/backend/main.py -- all in one file for simplicity
+- Ticker list imported from config at startup -- never hardcoded in endpoint handlers
+- All parquet reads use pd.read_parquet with explicit columns where possible
+- Missing ticker returns 404, not 500
+- CORS: allow origins [http://localhost:5173] only
 
-### File paths — always pathlib, never hardcoded Windows strings
-```python
-# Good
-from pathlib import Path
-MARKET_ML_BASE = Path(r"<path from CLAUDE.local.md>")
-path = MARKET_ML_BASE / f"{ticker}_features.parquet"
+## JavaScript (React frontend)
+- Ticker config: src/config/tickers.js is the single source of truth
+- Sector-grouped data: use SECTORS and COMPANY_NAMES, not hardcoded
+- API calls: always through /api proxy (vite.config.js), not direct port 8000
+- Loading states: every component that fetches data must show a loading indicator
+- Error boundaries: use App.jsx ErrorBoundary for top-level failures
+- Theme: dark/light via useTheme hook and Tailwind darkMode: class
 
-# Bad
-path = "C:\\Users\\borra\\...\\AAPL_features.parquet"
-```
+## Naming
+- React components: PascalCase (PriceChart, MetricCard)
+- Hooks: camelCase with use prefix (useTheme, usePriceData)
+- API paths: lowercase with hyphens (/api/model-stats)
+- Parquet columns: match market_ml output exactly (prob_bear, prob_side, prob_bull)
 
-### Endpoint pattern
-Every endpoint must follow this structure:
-```python
-@app.get("/api/<resource>")
-def get_<resource>(ticker: str = Query(default="AAPL")):
-    ticker = _validate_ticker(ticker)
-    try:
-        df = load_ticker_data(ticker)
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    # ... process and return
-```
+## No speculative complexity
+- Add features only when they are in scope (Phase 1-3 complete, Phase 4 is LSTM)
+- No placeholder UI elements
+- No commented-out code blocks
 
-### No debug prints in production
-Remove all `print(f"[load_ticker_...]")` before committing. Use proper logging if needed.
-
-### lru_cache args must be hashable
-`load_ticker_data(ticker: str)` — string arg is fine. Never pass DataFrames or dicts to cached functions.
-
-### df_to_records() for all responses
-Use the shared `df_to_records()` helper for any DataFrame → JSON conversion. It handles `NaN`/`Inf` → `None` and date formatting.
-
----
-
-## Frontend (React / JSX)
-
-### Single source of truth for tickers
-```js
-// Good — always import from config
-import { SECTORS, COMPANY_NAMES, getSector } from '../config/tickers.js'
-
-// Bad — duplicated inline
-const TICKERS = ['AAPL', 'MSFT', ...]
-```
-
-### Tailwind dark mode — always pair classes
-```jsx
-// Good — explicit dark variant
-className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
-
-// Bad — dark mode will break
-className="bg-white text-slate-900"
-```
-
-### useEffect dependencies must include ticker
-```jsx
-// Good — re-fetches when ticker changes
-useEffect(() => {
-  fetch(`/api/overview?ticker=${ticker}`)
-    ...
-}, [ticker])
-
-// Bad — stale data on ticker change
-useEffect(() => {
-  fetch('/api/overview?ticker=AAPL')
-    ...
-}, [])
-```
-
-### Error states must be visible
-```jsx
-// Good
-{error && <div className="text-red-400">Could not load data: {error}</div>}
-
-// Bad — silent failure
-{data && <Chart data={data} />}
-```
-
-### No console.log in production JSX
-Remove all `console.log()` before committing.
