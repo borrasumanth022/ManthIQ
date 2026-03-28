@@ -1,25 +1,36 @@
 # ManthIQ
 
-**Market intelligence dashboard for equities** — interactive price history, technical indicators, and an ML prediction lab in a single dark-mode web app.
+**Multi-ticker market intelligence dashboard** — interactive price history, technical indicators, and an ML prediction lab for 11 equities across Tech and Biotech sectors.
 
 <img width="1559" height="978" alt="image" src="https://github.com/user-attachments/assets/ed7eec11-2b14-4b63-857b-20dd5590aa5a" />
 
+---
+
+## Tickers
+
+| Sector | Tickers |
+|--------|---------|
+| Tech | AAPL · MSFT · NVDA · GOOGL · AMZN · META |
+| Biotech | LLY · MRNA · BIIB · REGN · VRTX |
+
+Switch between tickers at any time using the dropdown in the navbar. The sector badge (indigo = Tech, teal = Biotech) updates automatically.
 
 ---
 
 ## Features
 
 ### Live Tab
-- 30-year OHLCV price and volume chart with gradient area rendering
-- Time-range filters: 1M · 3M · 6M · 1Y · 5Y · 10Y · 15Y · 20Y · 25Y · All
+- Full OHLCV price and volume chart with gradient area rendering
+- Time-range filters: 1M · 3M · 6M · 1Y · 5Y · 10Y · All
 - Metric cards: latest price, daily return, 21-day annualised volatility
 - Dark / light mode toggle, persisted across sessions
 
 ### Model Lab Tab
-- Actual vs. predicted price overlay (dashed line) on the same chart
-- Direction confidence bar showing bullish / bearish signal probability
-- Model accuracy cards: overall, bull, and bear accuracy
-- ⚠️ Currently shows simulated predictions — live model output coming in Phase 2
+- XGBoost walk-forward out-of-sample predictions — no lookahead, no random splits
+- Actual price vs direction signal overlay (dashed purple line = close ±2% per predicted direction)
+- Three-segment confidence bar: Bear · Sideways · Bull probabilities for the latest prediction
+- Accuracy cards: overall OOS accuracy, bull recall, bear recall, sideways recall
+- Sector model label (Tech model / Biotech model) shown per ticker
 
 ---
 
@@ -30,13 +41,14 @@
 | Frontend | React 18, Vite, Tailwind CSS, Recharts |
 | Backend | FastAPI, Uvicorn |
 | Data processing | Python, Pandas, NumPy, PyArrow |
-| Data format | Parquet |
+| Data format | Parquet (one file per ticker) |
+| ML | XGBoost, walk-forward cross-validation |
 
 ---
 
 ## Prerequisites
 
-- **Python** 3.10+ with `pip`
+- **Python** 3.10+ (Anaconda recommended)
 - **Node.js** 18+
 
 ---
@@ -46,29 +58,30 @@
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/your-username/ManthIQ.git
+git clone https://github.com/borrasumanth022/ManthIQ.git
 cd ManthIQ
 ```
 
-### 2. Backend
+### 2. Backend dependencies
 
 ```bash
-cd backend
+cd src/backend
 pip install -r requirements.txt
 ```
 
-The backend reads a Parquet file of OHLCV data and technical features. By default it expects the file at:
+The backend reads parquet files produced by the `market_ml` pipeline. It expects files at:
 
 ```
-../aapl_ml/data/processed/aapl_features.parquet
+{market_ml_root}/data/processed/{TICKER}_features.parquet
+{market_ml_root}/data/processed/{TICKER}_predictions.parquet
 ```
 
-Update the `PARQUET_PATH` variable in `backend/main.py` to point to your own data file if needed. The file must contain at minimum: `open`, `high`, `low`, `close`, `volume`, and a `DatetimeIndex`.
+Update `MARKET_ML_BASE` in `src/backend/main.py` to point to your pipeline output directory.
 
-### 3. Frontend
+### 3. Frontend dependencies
 
 ```bash
-cd frontend
+cd src/frontend
 npm install
 ```
 
@@ -76,36 +89,41 @@ npm install
 
 ## Running
 
-Open two terminals from the project root.
-
-**Terminal 1 — API server:**
-
 ```bash
-cd backend
-uvicorn main:app --reload --port 8000
+# From the project root — starts both backend and frontend
+start.bat
 ```
 
-**Terminal 2 — Dev server:**
+Or in two separate terminals:
 
 ```bash
-cd frontend
+# Terminal 1 — API server (port 8000)
+cd src/backend
+uvicorn main:app --reload --port 8000
+
+# Terminal 2 — Dev server (port 5173)
+cd src/frontend
 npm run dev
 ```
 
-Then open **http://localhost:5173** in your browser.
-
-Interactive API docs are available at **http://localhost:8000/docs**.
+Open **http://localhost:5173** in your browser.
+Interactive API docs: **http://localhost:8000/docs**
 
 ---
 
 ## API reference
 
+All endpoints accept a `?ticker=TICKER` query parameter (default: `AAPL`).
+
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/price` | OHLCV records. Pass `?limit=N` to cap the number of rows returned. |
+| `GET` | `/api/tickers` | All supported tickers grouped by sector |
+| `GET` | `/api/price` | OHLCV records. Pass `?limit=N` to cap rows. |
 | `GET` | `/api/indicators` | RSI, MACD, Bollinger Bands, SMA 50/200 |
-| `GET` | `/api/overview` | Latest price, daily return, 1-month return, volatility, RSI |
-| `GET` | `/api/debug` | Data file path, row count, and date range |
+| `GET` | `/api/overview` | Latest price, daily return, volatility, RSI |
+| `GET` | `/api/predictions` | OOS walk-forward predictions + close price |
+| `GET` | `/api/model-stats` | Aggregated accuracy metrics + latest signal |
+| `GET` | `/api/debug` | Data file path, row count, date range |
 
 ---
 
@@ -113,23 +131,33 @@ Interactive API docs are available at **http://localhost:8000/docs**.
 
 ```
 ManthIQ/
-├── backend/
-│   ├── main.py              # FastAPI app — data loading and API endpoints
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Navbar.jsx   # Tab navigation and theme toggle
-│   │   │   ├── MetricCard.jsx
-│   │   │   └── PriceChart.jsx  # Recharts price + volume + predicted line
-│   │   ├── pages/
-│   │   │   ├── Dashboard.jsx   # Live tab
-│   │   │   └── ModelLab.jsx    # Model Lab tab
-│   │   └── hooks/
-│   │       └── useTheme.js     # Dark/light mode with localStorage
-│   ├── index.html
-│   ├── vite.config.js       # Proxies /api → :8000
-│   └── package.json
+├── src/
+│   ├── backend/
+│   │   ├── main.py              # FastAPI app — all endpoints, path resolution, schema normalisation
+│   │   └── requirements.txt
+│   └── frontend/
+│       ├── src/
+│       │   ├── config/
+│       │   │   └── tickers.js   # Sector groupings and company names (single source of truth)
+│       │   ├── components/
+│       │   │   ├── Navbar.jsx   # Ticker dropdown, tab navigation, theme toggle
+│       │   │   ├── MetricCard.jsx
+│       │   │   └── PriceChart.jsx
+│       │   ├── pages/
+│       │   │   ├── Dashboard.jsx   # Live tab
+│       │   │   └── ModelLab.jsx    # Model Lab tab
+│       │   └── hooks/
+│       │       └── useTheme.js
+│       ├── index.html
+│       ├── vite.config.js       # Proxies /api → :8000
+│       └── package.json
+├── config/
+│   └── settings.json
+├── docs/
+│   ├── architecture.md
+│   ├── decisions/
+│   └── runbooks/
+├── start.bat
 └── LICENSE
 ```
 
@@ -137,9 +165,11 @@ ManthIQ/
 
 ## Roadmap
 
-- [ ] Wire trained XGBoost / LSTM model into Model Lab
+- [x] Live price + volume chart with time-range filters
+- [x] XGBoost OOS walk-forward predictions in Model Lab
+- [x] Multi-ticker support — 11 tickers, Tech + Biotech sectors
+- [ ] LSTM predictions layer in Model Lab
 - [ ] Candlestick chart mode
-- [ ] Multi-ticker support
 - [ ] Deployable Docker setup
 
 ---

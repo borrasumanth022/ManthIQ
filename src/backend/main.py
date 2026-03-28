@@ -27,13 +27,6 @@ MARKET_ML_BASE = Path(
     r"C:\Users\borra\OneDrive\Desktop\ML Projects\market_ml\data\processed"
 )
 
-# Legacy AAPL paths (backward compat while market_ml pipeline builds up)
-_AAPL_FEATURES = Path(
-    r"C:\Users\borra\OneDrive\Desktop\ML Projects\aapl_ml\data\processed\aapl_features.parquet"
-)
-_AAPL_PREDICTIONS = Path(
-    r"C:\Users\borra\OneDrive\Desktop\ML Projects\aapl_ml\data\processed\aapl_predictions_interactions.parquet"
-)
 
 SECTORS: dict[str, list[str]] = {
     "Tech":    ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META"],
@@ -66,30 +59,21 @@ def _validate_ticker(ticker: str) -> str:
 
 
 def _features_path(ticker: str) -> Path:
-    """Resolve features parquet for ticker. Falls back to legacy AAPL path."""
-    p = MARKET_ML_BASE / f"{ticker}_features.parquet"
-    if p.exists():
-        return p
-    if ticker == "AAPL" and _AAPL_FEATURES.exists():
-        return _AAPL_FEATURES
-    raise FileNotFoundError(f"No features parquet for {ticker}. Expected: {p}")
+    return MARKET_ML_BASE / f"{ticker}_features.parquet"
 
 
 def _predictions_path(ticker: str) -> Path:
-    """Return the predictions parquet path for a ticker.
-    Always prefers the market_ml path; AAPL falls back to the legacy aapl_ml
-    path only when the market_ml file is absent."""
-    p = MARKET_ML_BASE / f"{ticker}_predictions.parquet"
-    if ticker == "AAPL" and not p.exists() and _AAPL_PREDICTIONS.exists():
-        return _AAPL_PREDICTIONS
-    return p  # existence validated in load_ticker_predictions
+    return MARKET_ML_BASE / f"{ticker}_predictions.parquet"
 
 
 # ── Data loaders (cached per ticker) ─────────────────────────────────────────
 
 @lru_cache(maxsize=20)
 def load_ticker_data(ticker: str) -> pd.DataFrame:
-    df = pd.read_parquet(_features_path(ticker))
+    path = _features_path(ticker)
+    if not path.exists():
+        raise FileNotFoundError(f"Features parquet not found for {ticker}. Expected: {path}")
+    df = pd.read_parquet(path)
     df.index = pd.to_datetime(df.index)
     return df.sort_index()
 
@@ -102,7 +86,6 @@ def load_ticker_predictions(ticker: str) -> pd.DataFrame:
             f"Predictions parquet not found for {ticker}.\n"
             f"Expected: {MARKET_ML_BASE / f'{ticker}_predictions.parquet'}"
         )
-    print(f"[load_ticker_predictions] loading {path}", flush=True)
     df = pd.read_parquet(path)
     df.index = pd.to_datetime(df.index)
     df = df.sort_index()
@@ -123,7 +106,6 @@ def load_ticker_predictions(ticker: str) -> pd.DataFrame:
     if "confidence" not in df.columns:
         df["confidence"] = df[["prob_bear", "prob_sideways", "prob_bull"]].max(axis=1)
 
-    print(f"[load_ticker_predictions] {ticker}: {len(df)} rows, cols={df.columns.tolist()}", flush=True)
     return df
 
 
@@ -236,7 +218,7 @@ def get_model_stats(ticker: str = Query(default="AAPL")):
     oos_acc = float(correct.mean())
 
     per_class: dict = {}
-    for label, name in [(-1, "bear"), (0, "sideways"), (1, "bull")]:
+    for label, name in [(0, "bear"), (1, "sideways"), (2, "bull")]:
         actual_mask    = pred["actual"]    == label
         predicted_mask = pred["predicted"] == label
         recall    = float(correct[actual_mask].mean())    if actual_mask.sum()    > 0 else 0.0
@@ -250,7 +232,7 @@ def get_model_stats(ticker: str = Query(default="AAPL")):
 
     latest      = pred.iloc[-1]
     latest_date = pred.index[-1]
-    signal_map  = {1: "Bull", 0: "Sideways", -1: "Bear"}
+    signal_map  = {0: "Bear", 1: "Sideways", 2: "Bull"}
     sector      = get_sector(ticker)
 
     close_on_date = None

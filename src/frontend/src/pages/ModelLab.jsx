@@ -6,15 +6,18 @@ import { COMPANY_NAMES, getSector } from '../config/tickers.js'
 
 /**
  * Encode direction signal as ±2% price offset so it's visible on the price scale.
- *   Bull  (+1)  → predicted = close * 1.02
- *   Sideways (0) → predicted = close
- *   Bear  (-1)  → predicted = close * 0.98
+ * Pipeline encoding: 0=Bear, 1=Sideways, 2=Bull
+ *   Bear     (0) → predicted = close * 0.98
+ *   Sideways (1) → predicted = close
+ *   Bull     (2) → predicted = close * 1.02
  */
+const DIR_OFFSET = { 0: -0.02, 1: 0, 2: 0.02 }
+
 function mergeSignal(predictions) {
   return predictions.map(d => ({
     ...d,
     predicted: d.close != null
-      ? Math.round(d.close * (1 + d.predicted * 0.02) * 100) / 100
+      ? Math.round(d.close * (1 + (DIR_OFFSET[d.predicted] ?? 0)) * 100) / 100
       : null,
   }))
 }
