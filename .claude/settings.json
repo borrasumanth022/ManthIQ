@@ -1,0 +1,68 @@
+{
+  "projectName": "ManthIQ",
+  "version": "2.0.0",
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npm install*)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git mv*)",
+      "Bash(git add src/**)",
+      "Bash(git add .claude/**)",
+      "Bash(git add docs/**)",
+      "Bash(git add README.md)",
+      "Bash(git add .gitignore)",
+      "Bash(git commit*)",
+      "Bash(git push origin feat/**)",
+      "Bash(git push origin fix/**)",
+      "Bash(curl http://localhost:*)",
+      "Bash(python src/**)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(git push origin main)"
+    ]
+  },
+  "env": {
+    "BACKEND_PORT": "8000",
+    "FRONTEND_PORT": "5173",
+    "BACKEND_DIR": "src/backend",
+    "FRONTEND_DIR": "src/frontend"
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write(src/backend/**)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/api-testing.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write(src/frontend/src/**)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/build-check.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/data-validation.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

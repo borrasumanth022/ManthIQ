@@ -14,10 +14,11 @@ src/frontend/dist/
 .env.local
 .env.*.local
 
-# Claude Code internal files
+# Claude Code internal files (private — do not commit)
 CLAUDE.md
+CLAUDE.local.md
 CLAUDE_ManthIQ.md
-.claude/
+.claude/settings.local.json
 
 # OS
 .DS_Store
