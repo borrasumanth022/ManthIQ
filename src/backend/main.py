@@ -338,12 +338,21 @@ def get_signals():
         "date":         latest_date.strftime("%Y-%m-%d"),
     }
 
+    def _float_or_none(row, col):
+        return round(float(row[col]), 2) if col in row.index and pd.notna(row[col]) else None
+
     def _row_dict(row, date):
         conf = float(max(row["proba_bull"], row["proba_bear"], row["proba_sideways"]))
         direction = (
-            "Bull"     if row["proba_bull"]     == max(row["proba_bull"], row["proba_bear"], row["proba_sideways"])
-            else "Bear" if row["proba_bear"]    == max(row["proba_bull"], row["proba_bear"], row["proba_sideways"])
+            "Bull"      if row["proba_bull"]  == max(row["proba_bull"], row["proba_bear"], row["proba_sideways"])
+            else "Bear" if row["proba_bear"]  == max(row["proba_bull"], row["proba_bear"], row["proba_sideways"])
             else "Sideways"
+        )
+        expiry_raw = row.get("expiry_date") if hasattr(row, "get") else None
+        expiry = (
+            pd.to_datetime(expiry_raw).strftime("%b %d %Y")
+            if expiry_raw is not None and pd.notna(expiry_raw)
+            else None
         )
         return {
             "ticker":               row["ticker"],
@@ -359,6 +368,14 @@ def get_signals():
             "model_version":        str(row["model_version"]),
             "notes":                str(row["notes"]) if row["notes"] else None,
             "date":                 date.strftime("%Y-%m-%d"),
+            # Iron condor strikes — present only when pipeline writes them
+            "short_call_strike":    _float_or_none(row, "short_call_strike"),
+            "long_call_strike":     _float_or_none(row, "long_call_strike"),
+            "short_put_strike":     _float_or_none(row, "short_put_strike"),
+            "long_put_strike":      _float_or_none(row, "long_put_strike"),
+            "premium_target":       _float_or_none(row, "premium_target"),
+            "max_loss_estimate":    _float_or_none(row, "max_loss_estimate"),
+            "expiry_date":          expiry,
         }
 
     fires, no_fires = [], []

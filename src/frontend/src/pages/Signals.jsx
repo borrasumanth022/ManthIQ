@@ -62,6 +62,36 @@ function MetricCard({ label, value, sub, dark }) {
   )
 }
 
+function IronCondorDetail({ row }) {
+  const hasStrikes = row.short_call_strike != null && row.long_call_strike != null
+    && row.short_put_strike != null && row.long_put_strike != null
+
+  if (!hasStrikes) {
+    return (
+      <span className="text-slate-600 italic">Strike data unavailable</span>
+    )
+  }
+
+  const fmt = v => `$${v % 1 === 0 ? v.toFixed(0) : v.toFixed(2)}`
+
+  return (
+    <span className="text-slate-400">
+      <span className="text-slate-300 font-medium">Iron Condor: </span>
+      Sell {fmt(row.short_call_strike)}C / Buy {fmt(row.long_call_strike)}C
+      {' \u2014 '}
+      Sell {fmt(row.short_put_strike)}P / Buy {fmt(row.long_put_strike)}P
+      {(row.premium_target != null || row.max_loss_estimate != null || row.expiry_date) && (
+        <>
+          <span className="mx-2 text-slate-700">|</span>
+          {row.premium_target    != null && <>Premium target: ~{fmt(row.premium_target)}<span className="mx-2 text-slate-700">|</span></>}
+          {row.max_loss_estimate != null && <>Max loss: ~{fmt(row.max_loss_estimate)}<span className="mx-2 text-slate-700">|</span></>}
+          {row.expiry_date       != null && <>Expiry: {row.expiry_date}</>}
+        </>
+      )}
+    </span>
+  )
+}
+
 function SignalsTable({ fires, noFires, dark }) {
   const allRows = [
     ...fires.map(r => ({ ...r, isFire: true })),
@@ -88,46 +118,58 @@ function SignalsTable({ fires, noFires, dark }) {
         </thead>
         <tbody>
           {allRows.map(row => (
-            <tr
-              key={row.ticker}
-              className={`border-b border-slate-800/50 transition-colors ${
-                row.isFire
-                  ? 'bg-emerald-500/5 hover:bg-emerald-500/10'
-                  : 'hover:bg-slate-800/30'
-              }`}
-            >
-              <td className={`py-2.5 pr-4 font-bold num ${row.isFire ? 'text-slate-100' : 'text-slate-500'}`}>
-                {row.ticker}
-              </td>
-              <td className="py-2.5 pr-4">
-                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${SECTOR_BADGE[row.sector] ?? ''}`}>
-                  {row.sector}
-                </span>
-              </td>
-              <td className="py-2.5 pr-4">
-                {row.isFire ? (
-                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    FIRE
+            <>
+              <tr
+                key={row.ticker}
+                className={`transition-colors ${
+                  row.isFire
+                    ? 'bg-emerald-500/5 hover:bg-emerald-500/10'
+                    : 'border-b border-slate-800/50 hover:bg-slate-800/30'
+                }`}
+              >
+                <td className={`py-2.5 pr-4 font-bold num ${row.isFire ? 'text-slate-100' : 'text-slate-500'}`}>
+                  {row.ticker}
+                </td>
+                <td className="py-2.5 pr-4">
+                  <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${SECTOR_BADGE[row.sector] ?? ''}`}>
+                    {row.sector}
                   </span>
-                ) : (
-                  <span className="text-slate-600 text-xs">NO FIRE</span>
-                )}
-              </td>
-              <td className={`py-2.5 pr-4 text-xs font-medium ${row.isFire ? DIR_COLOR[row.direction] ?? 'text-slate-400' : 'text-slate-600'}`}>
-                {row.direction}
-              </td>
-              <td className={`py-2.5 pr-4 text-right num text-xs ${row.isFire ? 'text-slate-200 font-semibold' : 'text-slate-600'}`}>
-                {(row.confidence * 100).toFixed(1)}%
-              </td>
-              <td className={`py-2.5 pr-4 text-right num text-xs ${row.isFire ? 'text-emerald-300 font-semibold' : 'text-slate-700'}`}>
-                {row.isFire && row.recommended_size_pct > 0
-                  ? `${row.recommended_size_pct.toFixed(1)}%`
-                  : '—'}
-              </td>
-              <td className="py-2.5 text-xs text-slate-600 max-w-xs truncate">
-                {row.notes ?? ''}
-              </td>
-            </tr>
+                </td>
+                <td className="py-2.5 pr-4">
+                  {row.isFire ? (
+                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      FIRE
+                    </span>
+                  ) : (
+                    <span className="text-slate-600 text-xs">NO FIRE</span>
+                  )}
+                </td>
+                <td className={`py-2.5 pr-4 text-xs font-medium ${row.isFire ? DIR_COLOR[row.direction] ?? 'text-slate-400' : 'text-slate-600'}`}>
+                  {row.direction}
+                </td>
+                <td className={`py-2.5 pr-4 text-right num text-xs ${row.isFire ? 'text-slate-200 font-semibold' : 'text-slate-600'}`}>
+                  {(row.confidence * 100).toFixed(1)}%
+                </td>
+                <td className={`py-2.5 pr-4 text-right num text-xs ${row.isFire ? 'text-emerald-300 font-semibold' : 'text-slate-700'}`}>
+                  {row.isFire && row.recommended_size_pct > 0
+                    ? `${row.recommended_size_pct.toFixed(1)}%`
+                    : '—'}
+                </td>
+                <td className="py-2.5 text-xs text-slate-600 max-w-xs truncate">
+                  {row.notes ?? ''}
+                </td>
+              </tr>
+              {row.isFire && (
+                <tr
+                  key={`${row.ticker}-condor`}
+                  className="border-b border-slate-800/50 bg-emerald-500/5"
+                >
+                  <td colSpan={7} className="pb-2.5 pt-0 pl-4 pr-4 text-xs">
+                    <IronCondorDetail row={row} />
+                  </td>
+                </tr>
+              )}
+            </>
           ))}
         </tbody>
       </table>
