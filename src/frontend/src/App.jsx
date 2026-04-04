@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Navbar from './components/Navbar.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import ModelLab from './pages/ModelLab.jsx'
+import Signals from './pages/Signals.jsx'
 import { useTheme } from './hooks/useTheme.js'
 
 // Error boundary — catches silent render crashes so they show up visibly
@@ -52,10 +53,9 @@ export default function App() {
         onTickerChange={setTicker}
       />
       <ErrorBoundary key={`${tab}-${ticker}`}>
-        {tab === 'live'
-          ? <Dashboard dark={dark} ticker={ticker} />
-          : <ModelLab  dark={dark} ticker={ticker} />
-        }
+        {tab === 'live'     && <Dashboard dark={dark} ticker={ticker} />}
+        {tab === 'modellab' && <ModelLab  dark={dark} ticker={ticker} />}
+        {tab === 'signals'  && <Signals   dark={dark} />}
       </ErrorBoundary>
     </div>
   )

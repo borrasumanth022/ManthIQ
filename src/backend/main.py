@@ -22,10 +22,10 @@ from functools import lru_cache
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-# New multi-ticker pipeline
 MARKET_ML_BASE = Path(
     r"C:\Users\borra\OneDrive\Desktop\ML Projects\market_ml\data\processed"
 )
+SIGNALS_PATH = MARKET_ML_BASE.parent / "signals" / "signal_log.parquet"
 
 
 SECTORS: dict[str, list[str]] = {
@@ -313,6 +313,119 @@ def debug(ticker: str = Query(default="AAPL")):
         }
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.get("/api/signals")
+def get_signals():
+    """Current week's signals and last 8 weeks of FIRE history."""
+    if not SIGNALS_PATH.exists():
+        raise HTTPException(status_code=404, detail=f"signal_log.parquet not found at {SIGNALS_PATH}")
+
+    df = pd.read_parquet(SIGNALS_PATH)
+    df.index = pd.to_datetime(df.index)
+    df = df.sort_index()
+
+    latest_date = df.index.max()
+    current = df[df.index == latest_date]
+
+    # Regime from current week (all rows share the same regime)
+    r = current.iloc[0]
+    regime = {
+        "state":        int(r["regime_state"]),
+        "label":        str(r["regime_label"]),
+        "vix":          round(float(r["vix_close"]),    2) if pd.notna(r["vix_close"])    else None,
+        "yield_spread": round(float(r["yield_spread"]), 2) if pd.notna(r["yield_spread"]) else None,
+        "date":         latest_date.strftime("%Y-%m-%d"),
+    }
+
+    def _row_dict(row, date):
+        conf = float(max(row["proba_bull"], row["proba_bear"], row["proba_sideways"]))
+        direction = (
+            "Bull"     if row["proba_bull"]     == max(row["proba_bull"], row["proba_bear"], row["proba_sideways"])
+            else "Bear" if row["proba_bear"]    == max(row["proba_bull"], row["proba_bear"], row["proba_sideways"])
+            else "Sideways"
+        )
+        return {
+            "ticker":               row["ticker"],
+            "sector":               str(row["sector"]).title(),
+            "signal":               row["signal"],
+            "confidence":           round(conf, 4),
+            "direction":            direction,
+            "proba_bull":           round(float(row["proba_bull"]),      4),
+            "proba_bear":           round(float(row["proba_bear"]),      4),
+            "proba_sideways":       round(float(row["proba_sideways"]),  4),
+            "kelly_fraction":       round(float(row["kelly_fraction"]),  4),
+            "recommended_size_pct": round(float(row["recommended_size_pct"]), 1),
+            "model_version":        str(row["model_version"]),
+            "notes":                str(row["notes"]) if row["notes"] else None,
+            "date":                 date.strftime("%Y-%m-%d"),
+        }
+
+    fires, no_fires = [], []
+    for date, row in current.iterrows():
+        (fires if row["signal"] == "FIRE" else no_fires).append(_row_dict(row, date))
+
+    # Last 8 weeks of FIRE signal history
+    all_fires = df[df["signal"] == "FIRE"]
+    history = []
+    for wdate in sorted(all_fires.index.unique(), reverse=True)[:8]:
+        week = []
+        for _, row in all_fires[all_fires.index == wdate].iterrows():
+            outcome = str(row["actual_outcome"]).strip() or None
+            week.append({
+                "ticker":             row["ticker"],
+                "sector":             str(row["sector"]).title(),
+                "confidence":         round(float(max(row["proba_bull"], row["proba_bear"], row["proba_sideways"])), 4),
+                "outcome":            outcome,
+                "actual_direction":   str(row["actual_direction"]).strip() or None,
+                "actual_return_pct":  round(float(row["actual_return_pct"]), 2) if pd.notna(row["actual_return_pct"]) else None,
+            })
+        history.append({"date": wdate.strftime("%Y-%m-%d"), "signals": week})
+
+    return {
+        "current_week": {
+            "date":     latest_date.strftime("%Y-%m-%d"),
+            "regime":   regime,
+            "fires":    fires,
+            "no_fires": no_fires,
+        },
+        "history": history,
+    }
+
+
+@app.get("/api/scorecard")
+def get_scorecard():
+    """Full paper-trading scorecard: overall, by sector, by ticker."""
+    if not SIGNALS_PATH.exists():
+        raise HTTPException(status_code=404, detail=f"signal_log.parquet not found at {SIGNALS_PATH}")
+
+    df = pd.read_parquet(SIGNALS_PATH)
+    fires = df[df["signal"] == "FIRE"].copy()
+
+    if fires.empty:
+        return {
+            "overall":   {"total_fires": 0, "resolved": 0, "wins": 0, "win_rate": None, "pnl_per_100": None},
+            "by_sector": {},
+            "by_ticker": {},
+        }
+
+    fires["_resolved"] = fires["actual_outcome"].apply(lambda x: bool(str(x).strip()))
+    fires["_win"]      = fires["actual_outcome"].apply(lambda x: str(x).strip().upper() == "WIN")
+
+    def _stats(subset):
+        total    = len(subset)
+        resolved = int(subset["_resolved"].sum())
+        wins     = int(subset["_win"].sum())
+        losses   = resolved - wins
+        win_rate = round(wins / resolved, 4)      if resolved > 0 else None
+        pnl      = round((wins - losses) / resolved * 100, 1) if resolved > 0 else None
+        return {"total_fires": total, "resolved": resolved, "wins": wins, "win_rate": win_rate, "pnl_per_100": pnl}
+
+    return {
+        "overall":   _stats(fires),
+        "by_sector": {s.title(): _stats(g) for s, g in fires.groupby("sector")},
+        "by_ticker": {t: _stats(g) for t, g in fires.groupby("ticker")},
+    }
 
 
 @app.get("/health")

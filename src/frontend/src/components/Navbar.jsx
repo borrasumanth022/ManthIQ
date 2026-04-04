@@ -11,6 +11,7 @@ export default function Navbar({ dark, onToggleTheme, activeTab, onTabChange, ti
   const tabs   = [
     { id: 'live',     label: 'Live'      },
     { id: 'modellab', label: 'Model Lab' },
+    { id: 'signals',  label: 'Signals'   },
   ]
   const sector = getSector(ticker)
 
