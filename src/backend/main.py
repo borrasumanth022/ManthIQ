@@ -32,10 +32,8 @@ SECTORS: dict[str, list[str]] = {
     "Tech":       ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AMD", "TSLA", "CRM", "ADBE", "INTC", "ORCL"],
     "Biotech":    ["LLY",  "MRNA", "BIIB", "REGN",  "VRTX", "ABBV", "BMY", "GILD", "AMGN", "PFE"],
     "Financials": ["JPM",  "GS",   "BAC",  "MS",    "WFC"],
-    # "Energy": ["XOM", "CVX", "COP", "SLB", "EOG"],  # parquet files not yet in pipeline
+    "Energy":     ["XOM", "CVX", "COP", "SLB", "EOG"],
 }
-
-# NOTE: lru_cache maxsize raised to accommodate 27 tickers × 2 data types
 
 ALLOWED_TICKERS: set[str] = {t for tickers in SECTORS.values() for t in tickers}
 

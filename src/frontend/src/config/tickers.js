@@ -2,7 +2,7 @@ export const SECTORS = {
   Tech:       ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN', 'META', 'AMD', 'TSLA', 'CRM', 'ADBE', 'INTC', 'ORCL'],
   Biotech:    ['LLY', 'MRNA', 'BIIB', 'REGN', 'VRTX', 'ABBV', 'BMY', 'GILD', 'AMGN', 'PFE'],
   Financials: ['JPM', 'GS', 'BAC', 'MS', 'WFC'],
-  // Energy: ['XOM', 'CVX', 'COP', 'SLB', 'EOG'],  // parquet files not yet in pipeline
+  Energy:     ['XOM', 'CVX', 'COP', 'SLB', 'EOG'],
 }
 
 export const COMPANY_NAMES = {
