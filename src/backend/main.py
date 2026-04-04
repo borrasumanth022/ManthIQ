@@ -281,15 +281,18 @@ def get_predictions(
         raise HTTPException(status_code=404, detail=str(e))
 
     try:
-        price  = load_ticker_data(ticker)[["close"]]
-        merged = pred.join(price, how="left")
+        ohlcv_cols = ["open", "high", "low", "close", "volume"]
+        price_df   = load_ticker_data(ticker)
+        available  = [c for c in ohlcv_cols if c in price_df.columns]
+        merged     = pred.join(price_df[available], how="left")
     except FileNotFoundError:
-        merged = pred  # predictions parquet may already contain close
+        merged = pred
 
     if limit is not None:
         merged = merged.tail(limit)
 
-    cols = ["close", "actual", "predicted", "correct",
+    cols = ["open", "high", "low", "close", "volume",
+            "actual", "predicted", "correct",
             "prob_bear", "prob_sideways", "prob_bull", "confidence"]
     available = [c for c in cols if c in merged.columns]
     return df_to_records(merged[available])

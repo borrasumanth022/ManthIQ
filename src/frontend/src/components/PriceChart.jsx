@@ -36,18 +36,20 @@ function formatDateFull(dateStr) {
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
+const DIR_LABEL = { 0: 'Bear', 1: 'Sideways', 2: 'Bull' }
+
 function CustomTooltip({ active, payload, label, dark, showPredicted }) {
   if (!active || !payload?.length) return null
   const d = payload[0]?.payload ?? {}
 
   const rows = [
-    { k: 'Close',     v: d.close     != null ? `$${d.close.toFixed(2)}`     : '—' },
-    { k: 'Open',      v: d.open      != null ? `$${d.open.toFixed(2)}`      : '—' },
-    { k: 'High',      v: d.high      != null ? `$${d.high.toFixed(2)}`      : '—' },
-    { k: 'Low',       v: d.low       != null ? `$${d.low.toFixed(2)}`       : '—' },
+    { k: 'Close',     v: d.close  != null ? `$${d.close.toFixed(2)}`  : '—' },
+    { k: 'Open',      v: d.open   != null ? `$${d.open.toFixed(2)}`   : '—' },
+    { k: 'High',      v: d.high   != null ? `$${d.high.toFixed(2)}`   : '—' },
+    { k: 'Low',       v: d.low    != null ? `$${d.low.toFixed(2)}`    : '—' },
     { k: 'Volume',    v: formatVolume(d.volume) },
-    ...(showPredicted && d.predicted != null
-      ? [{ k: 'Predicted', v: `$${d.predicted.toFixed(2)}`, accent: true }]
+    ...(showPredicted && d.predictedDir != null
+      ? [{ k: 'Predicted', v: DIR_LABEL[d.predictedDir] ?? '—', accent: true }]
       : []),
   ]
 

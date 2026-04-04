@@ -16,6 +16,7 @@ const DIR_OFFSET = { 0: -0.02, 1: 0, 2: 0.02 }
 function mergeSignal(predictions) {
   return predictions.map(d => ({
     ...d,
+    predictedDir: d.predicted,   // raw 0/1/2 — used by tooltip for direction label
     predicted: d.close != null
       ? Math.round(d.close * (1 + (DIR_OFFSET[d.predicted] ?? 0)) * 100) / 100
       : null,
