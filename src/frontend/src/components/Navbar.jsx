@@ -1,8 +1,10 @@
 import { SECTORS, getSector } from '../config/tickers.js'
 
 const SECTOR_BADGE = {
-  Tech:    'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
-  Biotech: 'bg-teal-500/20   text-teal-300   border-teal-500/30',
+  Tech:       'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+  Biotech:    'bg-teal-500/20   text-teal-300   border-teal-500/30',
+  Financials: 'bg-amber-500/20  text-amber-300  border-amber-500/30',
+  Energy:     'bg-green-500/20  text-green-300  border-green-500/30',
 }
 
 export default function Navbar({ dark, onToggleTheme, activeTab, onTabChange, ticker, onTickerChange }) {

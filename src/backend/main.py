@@ -29,9 +29,13 @@ MARKET_ML_BASE = Path(
 
 
 SECTORS: dict[str, list[str]] = {
-    "Tech":    ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META"],
-    "Biotech": ["LLY",  "MRNA", "BIIB", "REGN",  "VRTX"],
+    "Tech":       ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AMD", "TSLA", "CRM", "ADBE", "INTC", "ORCL"],
+    "Biotech":    ["LLY",  "MRNA", "BIIB", "REGN",  "VRTX", "ABBV", "BMY", "GILD", "AMGN", "PFE"],
+    "Financials": ["JPM",  "GS",   "BAC",  "MS",    "WFC"],
+    # "Energy": ["XOM", "CVX", "COP", "SLB", "EOG"],  # parquet files not yet in pipeline
 }
+
+# NOTE: lru_cache maxsize raised to accommodate 27 tickers × 2 data types
 
 ALLOWED_TICKERS: set[str] = {t for tickers in SECTORS.values() for t in tickers}
 
@@ -68,7 +72,7 @@ def _predictions_path(ticker: str) -> Path:
 
 # ── Data loaders (cached per ticker) ─────────────────────────────────────────
 
-@lru_cache(maxsize=20)
+@lru_cache(maxsize=60)
 def load_ticker_data(ticker: str) -> pd.DataFrame:
     path = _features_path(ticker)
     if not path.exists():
@@ -78,7 +82,7 @@ def load_ticker_data(ticker: str) -> pd.DataFrame:
     return df.sort_index()
 
 
-@lru_cache(maxsize=20)
+@lru_cache(maxsize=60)
 def load_ticker_predictions(ticker: str) -> pd.DataFrame:
     path = _predictions_path(ticker)
     if not path.exists():
