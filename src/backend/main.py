@@ -25,7 +25,8 @@ from functools import lru_cache
 MARKET_ML_BASE = Path(
     r"C:\Users\borra\OneDrive\Desktop\ML Projects\market_ml\data\processed"
 )
-SIGNALS_PATH = MARKET_ML_BASE.parent / "signals" / "signal_log.parquet"
+SIGNALS_PATH    = MARKET_ML_BASE.parent / "signals" / "signal_log.parquet"
+REGIME_NOTES_DIR = MARKET_ML_BASE.parent.parent / "docs" / "regime_notes"
 
 
 SECTORS: dict[str, list[str]] = {
@@ -317,6 +318,23 @@ def debug(ticker: str = Query(default="AAPL")):
         raise HTTPException(status_code=404, detail=str(e))
 
 
+def _read_regime_notes(signal_date: pd.Timestamp) -> str | None:
+    """
+    Read the regime agent's context text for the given signal date.
+    Returns None if the file doesn't exist or can't be read.
+    File written by src/agents/regime_agent.py every Monday.
+    """
+    date_str  = signal_date.strftime("%Y-%m-%d")
+    txt_path  = REGIME_NOTES_DIR / f"{date_str}_context.txt"
+    if not txt_path.exists():
+        return None
+    try:
+        text = txt_path.read_text(encoding="utf-8").strip()
+        return text if text else None
+    except Exception:
+        return None
+
+
 @app.get("/api/signals")
 def get_signals():
     """Current week's signals and last 8 weeks of FIRE history."""
@@ -338,6 +356,7 @@ def get_signals():
         "vix":          round(float(r["vix_close"]),    2) if pd.notna(r["vix_close"])    else None,
         "yield_spread": round(float(r["yield_spread"]), 2) if pd.notna(r["yield_spread"]) else None,
         "date":         latest_date.strftime("%Y-%m-%d"),
+        "regime_notes": _read_regime_notes(latest_date),
     }
 
     def _float_or_none(row, col):

@@ -287,7 +287,7 @@ export default function Signals({ dark }) {
     <div className={`min-h-screen ${dark ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
 
-        {/* Regime banner */}
+        {/* Regime banner + agent context note */}
         {loading ? (
           <Skeleton className="h-16" />
         ) : error ? (
@@ -295,14 +295,21 @@ export default function Signals({ dark }) {
             Could not load signals: {error}
           </div>
         ) : regime ? (
-          <RegimeBanner regime={regime} />
+          <div className="space-y-2">
+            <RegimeBanner regime={regime} />
+            {regime.regime_notes && (
+              <p className="text-sm italic text-slate-400 leading-relaxed px-1">
+                {regime.regime_notes}
+              </p>
+            )}
+          </div>
         ) : null}
 
         {/* Page header */}
         <div>
           <h1 className="text-2xl font-bold text-slate-50">Signals</h1>
           <p className={`text-sm mt-0.5 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
-            Live paper trading — XGBoost direction signals across all 32 tickers
+            Live paper trading — XGBoost direction signals across all 42 tickers
           </p>
         </div>
 
