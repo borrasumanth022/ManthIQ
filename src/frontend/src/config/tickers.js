@@ -2,7 +2,9 @@ export const SECTORS = {
   Tech:       ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN', 'META', 'AMD', 'TSLA', 'CRM', 'ADBE', 'INTC', 'ORCL'],
   Biotech:    ['LLY', 'MRNA', 'BIIB', 'REGN', 'VRTX', 'ABBV', 'BMY', 'GILD', 'AMGN', 'PFE'],
   Financials: ['JPM', 'GS', 'BAC', 'MS', 'WFC'],
-  Energy:     ['XOM', 'CVX', 'COP', 'SLB', 'EOG'],
+  Energy:            ['XOM', 'CVX', 'COP', 'SLB', 'EOG'],
+  ConsumerStaples:   ['KO', 'PG', 'WMT', 'COST', 'CL'],
+  Semiconductors:    ['TSM', 'ASML', 'AMAT', 'LRCX', 'KLAC'],
 }
 
 export const COMPANY_NAMES = {
@@ -36,12 +38,24 @@ export const COMPANY_NAMES = {
   BAC:   'Bank of America Corp.',
   MS:    'Morgan Stanley',
   WFC:   'Wells Fargo & Co.',
-  // Energy (pending pipeline data)
+  // Energy
   XOM:   'Exxon Mobil Corp.',
   CVX:   'Chevron Corp.',
   COP:   'ConocoPhillips',
   SLB:   'SLB (Schlumberger)',
   EOG:   'EOG Resources',
+  // Consumer Staples
+  KO:    'Coca-Cola Co.',
+  PG:    'Procter & Gamble Co.',
+  WMT:   'Walmart Inc.',
+  COST:  'Costco Wholesale Corp.',
+  CL:    'Colgate-Palmolive Co.',
+  // Semiconductors
+  TSM:   'Taiwan Semiconductor',
+  ASML:  'ASML Holding NV',
+  AMAT:  'Applied Materials Inc.',
+  LRCX:  'Lam Research Corp.',
+  KLAC:  'KLA Corp.',
 }
 
 export function getSector(ticker) {

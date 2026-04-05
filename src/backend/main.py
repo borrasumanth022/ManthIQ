@@ -32,7 +32,9 @@ SECTORS: dict[str, list[str]] = {
     "Tech":       ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AMD", "TSLA", "CRM", "ADBE", "INTC", "ORCL"],
     "Biotech":    ["LLY",  "MRNA", "BIIB", "REGN",  "VRTX", "ABBV", "BMY", "GILD", "AMGN", "PFE"],
     "Financials": ["JPM",  "GS",   "BAC",  "MS",    "WFC"],
-    "Energy":     ["XOM", "CVX", "COP", "SLB", "EOG"],
+    "Energy":          ["XOM",  "CVX",  "COP",  "SLB",  "EOG"],
+    "ConsumerStaples": ["KO",   "PG",   "WMT",  "COST", "CL"],
+    "Semiconductors":  ["TSM",  "ASML", "AMAT", "LRCX", "KLAC"],
 }
 
 ALLOWED_TICKERS: set[str] = {t for tickers in SECTORS.values() for t in tickers}
