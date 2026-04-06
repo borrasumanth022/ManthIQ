@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Navbar from './components/Navbar.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import ModelLab from './pages/ModelLab.jsx'
+import Indicators from './pages/Indicators.jsx'
 import Signals from './pages/Signals.jsx'
 import { useTheme } from './hooks/useTheme.js'
 
@@ -53,9 +54,10 @@ export default function App() {
         onTickerChange={setTicker}
       />
       <ErrorBoundary key={`${tab}-${ticker}`}>
-        {tab === 'live'     && <Dashboard dark={dark} ticker={ticker} />}
-        {tab === 'modellab' && <ModelLab  dark={dark} ticker={ticker} />}
-        {tab === 'signals'  && <Signals   dark={dark} />}
+        {tab === 'live'       && <Dashboard   dark={dark} ticker={ticker} />}
+        {tab === 'indicators' && <Indicators dark={dark} ticker={ticker} />}
+        {tab === 'modellab'   && <ModelLab   dark={dark} ticker={ticker} />}
+        {tab === 'signals'    && <Signals    dark={dark} />}
       </ErrorBoundary>
     </div>
   )

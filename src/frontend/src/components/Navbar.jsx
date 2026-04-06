@@ -11,9 +11,10 @@ const SECTOR_BADGE = {
 
 export default function Navbar({ dark, onToggleTheme, activeTab, onTabChange, ticker, onTickerChange }) {
   const tabs   = [
-    { id: 'live',     label: 'Live'      },
-    { id: 'modellab', label: 'Model Lab' },
-    { id: 'signals',  label: 'Signals'   },
+    { id: 'live',       label: 'Live'       },
+    { id: 'indicators', label: 'Indicators' },
+    { id: 'modellab',   label: 'Model Lab'  },
+    { id: 'signals',    label: 'Signals'    },
   ]
   const sector = getSector(ticker)
 
