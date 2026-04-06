@@ -181,6 +181,9 @@ export default function ModelLab({ dark, ticker }) {
             XGBoost dir_1w · {sector} sector model ·{' '}
             {stats ? `${stats.n_samples.toLocaleString()} OOS samples` : '...'}
           </p>
+          <p className="text-xs text-slate-600 mt-1">
+            Updated on model retrain — approx. monthly
+          </p>
         </div>
 
         {/* Accuracy stats row */}
