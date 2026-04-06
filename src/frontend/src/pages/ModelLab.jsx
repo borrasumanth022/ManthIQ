@@ -147,10 +147,19 @@ export default function ModelLab({ dark, ticker }) {
     [predData]
   )
 
+  // Format recall — show "Insufficient signal" when the model scored 0 on a class
+  // (genuine class imbalance / model weakness, not missing data)
+  function fmtRecall(cls) {
+    if (!cls) return '—'
+    if (cls.n_actual === 0) return '—'
+    if (cls.recall === 0)   return 'Insuff. signal'
+    return `${(cls.recall * 100).toFixed(1)}%`
+  }
+
   const oosAccStr  = stats ? `${(stats.oos_accuracy * 100).toFixed(1)}%` : '—'
-  const bullRecStr = stats ? `${(stats.per_class.bull.recall * 100).toFixed(1)}%` : '—'
-  const bearRecStr = stats ? `${(stats.per_class.bear.recall * 100).toFixed(1)}%` : '—'
-  const sideRecStr = stats ? `${(stats.per_class.sideways.recall * 100).toFixed(1)}%` : '—'
+  const bullRecStr = stats ? fmtRecall(stats.per_class.bull)     : '—'
+  const bearRecStr = stats ? fmtRecall(stats.per_class.bear)     : '—'
+  const sideRecStr = stats ? fmtRecall(stats.per_class.sideways) : '—'
 
   const latest = stats?.latest_prediction
 
@@ -179,10 +188,12 @@ export default function ModelLab({ dark, ticker }) {
           </div>
           <p className={`text-sm mt-0.5 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
             XGBoost dir_1w · {sector} sector model ·{' '}
-            {stats ? `${stats.n_samples.toLocaleString()} OOS samples` : '...'}
+            {stats
+              ? `${stats.n_samples.toLocaleString()} OOS samples`
+              : <span className="text-slate-700">loading</span>}
           </p>
-          <p className="text-xs text-slate-600 mt-1">
-            Updated on model retrain — approx. monthly
+          <p className="text-xs text-slate-700 mt-1">
+            Historical accuracy — updates on model retrain (approx. monthly)
           </p>
         </div>
 
