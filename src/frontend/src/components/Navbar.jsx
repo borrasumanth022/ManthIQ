@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { SECTORS, getSector } from '../config/tickers.js'
 
 const SECTOR_BADGE = {
@@ -9,7 +10,19 @@ const SECTOR_BADGE = {
   Semiconductors:  'bg-purple-500/20 text-purple-300 border-purple-500/30',
 }
 
+function usePortfolio() {
+  const [capital, setCapital] = useState(null)
+  useEffect(() => {
+    fetch('/api/scorecard')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.portfolio?.current_capital != null) setCapital(d.portfolio.current_capital) })
+      .catch(() => {})
+  }, [])
+  return capital
+}
+
 export default function Navbar({ dark, onToggleTheme, activeTab, onTabChange, ticker, onTickerChange }) {
+  const portfolioCapital = usePortfolio()
   const tabs   = [
     { id: 'live',       label: 'Live'       },
     { id: 'indicators', label: 'Indicators' },
@@ -89,8 +102,17 @@ export default function Navbar({ dark, onToggleTheme, activeTab, onTabChange, ti
         ))}
       </div>
 
-      {/* Right: theme toggle */}
-      <div className="flex justify-end">
+      {/* Right: portfolio indicator + theme toggle */}
+      <div className="flex items-center gap-3 justify-end">
+        {portfolioCapital != null && (
+          <span className={`text-xs font-semibold num px-2 py-1 rounded border ${
+            portfolioCapital >= 100000
+              ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+              : 'text-red-400 bg-red-500/10 border-red-500/20'
+          }`}>
+            ${portfolioCapital.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+          </span>
+        )}
         <button
           onClick={onToggleTheme}
           title="Toggle theme"
