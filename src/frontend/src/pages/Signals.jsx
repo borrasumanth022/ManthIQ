@@ -241,6 +241,20 @@ function SpreadDetail({ row, signalType }) {
   return null
 }
 
+// ── Notes Cell ────────────────────────────────────────────────────────────────
+
+function NotesCell({ notes }) {
+  if (!notes) return null
+  const n = notes.toLowerCase()
+  if (n.includes('excluded_from_sideways_only'))
+    return <span className="text-emerald-500">Sideways excluded — Bull/Bear eligible</span>
+  if (n.includes('si_extreme'))
+    return <span className="text-amber-400">SI extreme — reduced position size</span>
+  if (n.includes('directional_exclusion'))
+    return <span className="text-red-400">Excluded from all signals</span>
+  return <span className="text-slate-600">{notes}</span>
+}
+
 // ── Signals Table ─────────────────────────────────────────────────────────────
 
 function SignalsTable({ fires, noFires }) {
@@ -312,8 +326,8 @@ function SignalsTable({ fires, noFires }) {
                   <td className="py-2.5 pr-3 text-right text-xs">
                     {isFire ? <PnlCell value={row.actual_pnl_dollars} /> : null}
                   </td>
-                  <td className="py-2.5 text-xs text-slate-600 max-w-xs truncate">
-                    {row.notes ?? ''}
+                  <td className="py-2.5 text-xs max-w-xs truncate">
+                    <NotesCell notes={row.notes} />
                   </td>
                 </tr>
                 {isFire && (
