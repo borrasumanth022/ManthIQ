@@ -433,22 +433,57 @@ def get_signals():
 
 @app.get("/api/scorecard")
 def get_scorecard():
-    """Full paper-trading scorecard: overall, by sector, by ticker."""
+    """Full paper-trading scorecard: overall, by sector, by ticker, by signal type."""
+    import json as _json
     if not SIGNALS_PATH.exists():
         raise HTTPException(status_code=404, detail=f"signal_log.parquet not found at {SIGNALS_PATH}")
 
     df = pd.read_parquet(SIGNALS_PATH)
     fires = df[df["signal"] == "FIRE"].copy()
 
+    # Load portfolio JSON for dollar P&L totals
+    portfolio_path = SIGNALS_PATH.parent.parent / "portfolio" / "paper_portfolio.json"
+    portfolio = {}
+    if portfolio_path.exists():
+        try:
+            with open(portfolio_path, "r") as f:
+                portfolio = _json.load(f)
+        except Exception:
+            pass
+
     if fires.empty:
         return {
-            "overall":   {"total_fires": 0, "resolved": 0, "wins": 0, "win_rate": None, "pnl_per_100": None},
-            "by_sector": {},
-            "by_ticker": {},
+            "overall":         {"total_fires": 0, "resolved": 0, "wins": 0, "win_rate": None,
+                                "pnl_per_100": None, "realized_pnl_dollars": 0.0},
+            "by_sector":       {},
+            "by_ticker":       {},
+            "by_signal_type":  {},
+            "portfolio": {
+                "starting_capital":  portfolio.get("starting_capital", 100000.0),
+                "current_capital":   portfolio.get("current_capital",  100000.0),
+                "realized_pnl":      portfolio.get("realized_pnl",     0.0),
+                "win_rate":          portfolio.get("win_rate",          None),
+            },
         }
 
     fires["_resolved"] = fires["actual_outcome"].apply(lambda x: bool(str(x).strip()))
     fires["_win"]      = fires["actual_outcome"].apply(lambda x: str(x).strip().upper() == "WIN")
+
+    # Back-fill signal_type for legacy rows
+    if "signal_type" not in fires.columns:
+        fires["signal_type"] = "SIDEWAYS_FIRE"
+    else:
+        fires["signal_type"] = fires["signal_type"].fillna("SIDEWAYS_FIRE")
+        legacy_mask = fires["signal_type"].apply(lambda x: str(x).strip() == "")
+        fires.loc[legacy_mask, "signal_type"] = "SIDEWAYS_FIRE"
+
+    # Dollar P&L column (may be absent in older logs)
+    if "actual_pnl_dollars" not in fires.columns:
+        fires["actual_pnl_dollars"] = float("nan")
+    fires["actual_pnl_dollars"] = pd.to_numeric(fires["actual_pnl_dollars"], errors="coerce")
+
+    PREMIUM  = 0.015
+    LOSS_MAX = 0.030
 
     def _stats(subset):
         total    = len(subset)
@@ -456,13 +491,31 @@ def get_scorecard():
         wins     = int(subset["_win"].sum())
         losses   = resolved - wins
         win_rate = round(wins / resolved, 4)      if resolved > 0 else None
-        pnl      = round((wins - losses) / resolved * 100, 1) if resolved > 0 else None
-        return {"total_fires": total, "resolved": resolved, "wins": wins, "win_rate": win_rate, "pnl_per_100": pnl}
+        pnl_100  = round((wins * PREMIUM - losses * LOSS_MAX) / resolved * 100, 1) if resolved > 0 else None
+        # Dollar P&L from actual_pnl_dollars column
+        pnl_dlr  = round(float(subset.loc[subset["_resolved"], "actual_pnl_dollars"].fillna(0.0).sum()), 2)
+        return {
+            "total_fires":         total,
+            "resolved":            resolved,
+            "wins":                wins,
+            "win_rate":            win_rate,
+            "pnl_per_100":         pnl_100,
+            "realized_pnl_dollars": pnl_dlr,
+        }
 
     return {
-        "overall":   _stats(fires),
-        "by_sector": {s.title(): _stats(g) for s, g in fires.groupby("sector")},
-        "by_ticker": {t: _stats(g) for t, g in fires.groupby("ticker")},
+        "overall":        _stats(fires),
+        "by_sector":      {s.title(): _stats(g) for s, g in fires.groupby("sector")},
+        "by_ticker":      {t: _stats(g) for t, g in fires.groupby("ticker")},
+        "by_signal_type": {st: _stats(g) for st, g in fires.groupby("signal_type")},
+        "portfolio": {
+            "starting_capital":  portfolio.get("starting_capital", 100000.0),
+            "current_capital":   portfolio.get("current_capital",  100000.0),
+            "realized_pnl":      portfolio.get("realized_pnl",     0.0),
+            "win_rate":          portfolio.get("win_rate",          None),
+            "pnl_by_signal_type": portfolio.get("pnl_by_signal_type", {}),
+            "pnl_by_sector":     portfolio.get("pnl_by_sector",     {}),
+        },
     }
 
 
